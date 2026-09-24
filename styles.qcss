@@ -1,0 +1,130 @@
+/* Configuración Global */
+QMainWindow, QWidget {
+    background-color: #121417;
+    color: #E1E7EC;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 14px;
+}
+
+/* Tarjetas de Métricas */
+QFrame#tarjetaMetrica {
+    background-color: #1E2228;
+    border-radius: 8px;
+    border: 1px solid #2B323C;
+    padding: 14px;
+}
+
+QLabel#etiquetaMetricaTitulo {
+    font-size: 13px;
+    color: #8C9BAE;
+    font-weight: 600;
+}
+
+QLabel#etiquetaMetricaValor {
+    font-size: 20px;
+    font-weight: bold;
+    color: #FFFFFF;
+}
+
+/* Contenedores y Paneles */
+QGroupBox {
+    background-color: #1A1D23;
+    border: 1px solid #2B323C;
+    border-radius: 8px;
+    margin-top: 14px;
+    padding: 16px;
+    font-weight: bold;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    left: 12px;
+    color: #4C9AFF;
+}
+
+/* Campos de Entrada */
+QLineEdit, QComboBox {
+    background-color: #0E1013;
+    border: 1px solid #2B323C;
+    border-radius: 6px;
+    padding: 8px 12px;
+    color: #FFFFFF;
+}
+
+QLineEdit:focus, QComboBox:focus {
+    border: 1px solid #4C9AFF;
+}
+
+/* Botones */
+QPushButton {
+    background-color: #2684FF;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 6px;
+    padding: 9px 18px;
+    font-weight: bold;
+}
+
+QPushButton:hover {
+    background-color: #0065FF;
+}
+
+QPushButton:pressed {
+    background-color: #0747A6;
+}
+
+QPushButton#btnEliminar {
+    background-color: #DE350B;
+}
+
+QPushButton#btnEliminar:hover {
+    background-color: #BF2600;
+}
+
+/* Tabla de Registros */
+QTableWidget {
+    background-color: #16181D;
+    border: 1px solid #2B323C;
+    border-radius: 8px;
+    gridline-color: #22272F;
+    selection-background-color: #243B55;
+    selection-color: #FFFFFF;
+}
+
+QHeaderView::section {
+    background-color: #1E2228;
+    color: #8C9BAE;
+    padding: 8px;
+    border: none;
+    font-weight: bold;
+    border-bottom: 2px solid #2B323C;
+}
+
+/* Panel de Topes y Barras de Progreso */
+QFrame#itemTope {
+    background-color: #1A1D23;
+    border-radius: 6px;
+    border: 1px solid #252A33;
+    padding: 8px;
+}
+
+QProgressBar {
+    background-color: #0E1013;
+    border: 1px solid #2B323C;
+    border-radius: 5px;
+    height: 18px;
+    text-align: center;
+    color: #FFFFFF;
+    font-weight: bold;
+    font-size: 11px;
+}
+
+QProgressBar::chunk {
+    border-radius: 4px;
+}
+
+QScrollArea {
+    border: none;
+    background-color: transparent;
+}
