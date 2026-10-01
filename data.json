@@ -8,20 +8,12 @@
     },
     "transacciones": [
         {
-            "id": "TX-1790290352-5074",
-            "concepto": "pago",
-            "monto": 50.0,
-            "categoria": "Alimentación",
-            "tipo": "gasto",
-            "fecha": "2026-09-24 18:52:32"
-        },
-        {
-            "id": "TX-1790290421-4230",
-            "concepto": "Aceite",
-            "monto": 10.0,
-            "categoria": "Alimentación",
-            "tipo": "gasto",
-            "fecha": "2026-09-24 18:53:41"
+            "id": "TX-1790895061-2827",
+            "concepto": "N",
+            "monto": 100.0,
+            "categoria": "Venta",
+            "tipo": "ingreso",
+            "fecha": "2026-10-01 18:51:01"
         }
     ]
 }

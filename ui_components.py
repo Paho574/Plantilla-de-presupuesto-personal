@@ -2,10 +2,11 @@ from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
     QLineEdit, QComboBox, QPushButton, QTableWidget, 
     QTableWidgetItem, QHeaderView, QFrame, QMessageBox,
-    QProgressBar, QScrollArea, QGroupBox
+    QProgressBar, QScrollArea, QGroupBox, QDateEdit
 )
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QDate
 from models import Transaccion
+from datetime import datetime, timedelta
 
 class TarjetaMetrica(QFrame):
     def __init__(self, titulo, valor_inicial="0.00 $"):
@@ -27,6 +28,83 @@ class TarjetaMetrica(QFrame):
         self.lbl_valor.setText(str(nuevo_valor))
         if color:
             self.lbl_valor.setStyleSheet(f"color: {color};")
+
+class FiltroFechas(QGroupBox):
+    def __init__(self, callback_aplicar):
+        super().__init__("Filtros y Métricas de Tiempo")
+        self.callback_aplicar = callback_aplicar
+        self.init_ui()
+
+    def init_ui(self):
+        layout = QHBoxLayout(self)
+        
+        self.combo_periodo = QComboBox()
+        self.combo_periodo.addItems([
+            "Todos los tiempos", 
+            "Mes actual", 
+            "Mes anterior", 
+            "Año actual", 
+            "Rango personalizado"
+        ])
+        self.combo_periodo.currentIndexChanged.connect(self.cambio_periodo)
+        
+        # Calendario Inicio
+        self.date_inicio = QDateEdit()
+        self.date_inicio.setCalendarPopup(True)
+        self.date_inicio.setDate(QDate.currentDate())
+        self.date_inicio.setVisible(False)
+        
+        # Calendario Fin
+        self.date_fin = QDateEdit()
+        self.date_fin.setCalendarPopup(True)
+        self.date_fin.setDate(QDate.currentDate())
+        self.date_fin.setVisible(False)
+        
+        self.lbl_hasta = QLabel(" hasta ")
+        self.lbl_hasta.setVisible(False)
+        
+        self.btn_aplicar = QPushButton("Filtrar")
+        self.btn_aplicar.clicked.connect(self.aplicar)
+        
+        layout.addWidget(QLabel("Visualizar período:"))
+        layout.addWidget(self.combo_periodo)
+        layout.addWidget(self.date_inicio)
+        layout.addWidget(self.lbl_hasta)
+        layout.addWidget(self.date_fin)
+        layout.addWidget(self.btn_aplicar)
+        layout.addStretch()
+
+    def cambio_periodo(self):
+        texto = self.combo_periodo.currentText()
+        es_personalizado = (texto == "Rango personalizado")
+        self.date_inicio.setVisible(es_personalizado)
+        self.date_fin.setVisible(es_personalizado)
+        self.lbl_hasta.setVisible(es_personalizado)
+
+    def aplicar(self):
+        texto = self.combo_periodo.currentText()
+        hoy = datetime.now()
+        
+        if texto == "Todos los tiempos":
+            inicio, fin = None, None
+        elif texto == "Mes actual":
+            inicio = datetime(hoy.year, hoy.month, 1)
+            fin = datetime.now()
+        elif texto == "Mes anterior":
+            primer_dia_mes_actual = datetime(hoy.year, hoy.month, 1)
+            ultimo_dia_mes_anterior = primer_dia_mes_actual - timedelta(days=1)
+            inicio = datetime(ultimo_dia_mes_anterior.year, ultimo_dia_mes_anterior.month, 1)
+            fin = datetime(ultimo_dia_mes_anterior.year, ultimo_dia_mes_anterior.month, ultimo_dia_mes_anterior.day, 23, 59, 59)
+        elif texto == "Año actual":
+            inicio = datetime(hoy.year, 1, 1)
+            fin = datetime.now()
+        else: # Rango personalizado
+            q_inicio = self.date_inicio.date()
+            q_fin = self.date_fin.date()
+            inicio = datetime(q_inicio.year(), q_inicio.month(), q_inicio.day())
+            fin = datetime(q_fin.year(), q_fin.month(), q_fin.day(), 23, 59, 59)
+            
+        self.callback_aplicar(inicio, fin)
 
 class FormularioTransaccion(QWidget):
     def __init__(self, callback_agregar):
@@ -152,14 +230,13 @@ class VisualizadorMetas(QGroupBox):
         self.layout_contenedor.addWidget(self.scroll_area)
 
     def actualizar_panel(self, estados_topes):
-        # Limpiar widgets previos
         while self.layout_items.count():
             hijo = self.layout_items.takeAt(0)
             if hijo.widget():
                 hijo.widget().deleteLater()
 
         if not estados_topes:
-            lbl_vacio = QLabel("No hay topes presupuestarios asignados.")
+            lbl_vacio = QLabel("No hay topes presupuestarios asignados o no hay gastos en este período.")
             lbl_vacio.setStyleSheet("color: #626F86; font-style: italic; padding: 10px;")
             self.layout_items.addWidget(lbl_vacio)
             return
@@ -170,7 +247,6 @@ class VisualizadorMetas(QGroupBox):
             card_layout = QVBoxLayout(card)
             card_layout.setContentsMargins(8, 8, 8, 8)
 
-            # Encabezado: Categoría e Indicador textual
             top_layout = QHBoxLayout()
             lbl_nombre = QLabel(f"<b>{categoria}</b>")
             lbl_status = QLabel(f"[{info['estado_texto'].upper()}]")
@@ -184,7 +260,6 @@ class VisualizadorMetas(QGroupBox):
             top_layout.addStretch()
             top_layout.addWidget(lbl_consumo)
 
-            # Barra de progreso con color dinámico
             barra = QProgressBar()
             barra.setRange(0, 100)
             valor_barra = min(int(info['porcentaje']), 100)
@@ -199,6 +274,48 @@ class VisualizadorMetas(QGroupBox):
             card_layout.addLayout(top_layout)
             card_layout.addWidget(barra)
             self.layout_items.addWidget(card)
+
+# NUEVA CLASE PARA BUSCADOR Y FILTROS RÁPIDOS
+class BuscadorTabla(QWidget):
+    def __init__(self, callback_buscar):
+        super().__init__()
+        self.callback_buscar = callback_buscar
+        self.init_ui()
+
+    def init_ui(self):
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        self.input_buscar = QLineEdit()
+        self.input_buscar.setPlaceholderText("Buscar por concepto (ej. pago del aceite)...")
+        # Real-time search: se actualiza conforme el usuario escribe
+        self.input_buscar.textChanged.connect(self.notificar_cambio)
+
+        self.combo_tipo = QComboBox()
+        self.combo_tipo.addItems(["Todos", "Ingreso", "Gasto"])
+        self.combo_tipo.currentIndexChanged.connect(self.notificar_cambio)
+
+        self.combo_categoria = QComboBox()
+        # Se añaden todas las categorías posibles más la opción "Todas"
+        self.combo_categoria.addItems([
+            "Todas", "Alimentación", "Servicios", "Transporte", "Ocio", 
+            "Educación", "Salud", "Salario", "Inversiones", "Freelance", 
+            "Venta", "Otros"
+        ])
+        self.combo_categoria.currentIndexChanged.connect(self.notificar_cambio)
+
+        layout.addWidget(QLabel("Buscar en tabla:"))
+        layout.addWidget(self.input_buscar, 3)
+        layout.addWidget(QLabel("Tipo:"))
+        layout.addWidget(self.combo_tipo, 1)
+        layout.addWidget(QLabel("Categoría:"))
+        layout.addWidget(self.combo_categoria, 1)
+
+    def notificar_cambio(self):
+        texto = self.input_buscar.text().strip()
+        tipo = self.combo_tipo.currentText()
+        cat = self.combo_categoria.currentText()
+        self.callback_buscar(texto, tipo, cat)
 
 class TablaTransacciones(QTableWidget):
     def __init__(self, callback_eliminar):

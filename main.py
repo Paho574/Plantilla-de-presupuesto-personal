@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHB
 from data_manager import DataManager
 from ui_components import (
     TarjetaMetrica, FormularioTransaccion, 
-    TablaTransacciones, FormularioTopes, VisualizadorMetas
+    TablaTransacciones, FormularioTopes, VisualizadorMetas, FiltroFechas, BuscadorTabla
 )
 
 class VentanaPrincipal(QMainWindow):
@@ -15,6 +15,15 @@ class VentanaPrincipal(QMainWindow):
 
         self.data_manager = DataManager("data.json")
         self.presupuesto = self.data_manager.cargar()
+        
+        # Variables de estado para los filtros de fecha
+        self.filtro_inicio = None
+        self.filtro_fin = None
+        
+        # Variables de estado para la búsqueda rápida en tabla
+        self.filtro_texto = ""
+        self.filtro_tipo = "Todos"
+        self.filtro_categoria = "Todas"
 
         self.init_ui()
         self.actualizar_interfaz()
@@ -25,6 +34,10 @@ class VentanaPrincipal(QMainWindow):
         layout_principal = QVBoxLayout(widget_central)
         layout_principal.setSpacing(14)
         layout_principal.setContentsMargins(18, 18, 18, 18)
+
+        # Panel de Filtros por fecha
+        self.filtro_fechas = FiltroFechas(self.aplicar_filtro_fechas)
+        layout_principal.addWidget(self.filtro_fechas)
 
         # Panel superior: Métricas
         layout_metricas = QHBoxLayout()
@@ -50,9 +63,24 @@ class VentanaPrincipal(QMainWindow):
         self.formulario_tx = FormularioTransaccion(self.agregar_transaccion)
         layout_principal.addWidget(self.formulario_tx)
 
+        # Buscador y filtros rápidos de tabla
+        self.buscador_tabla = BuscadorTabla(self.aplicar_busqueda_tabla)
+        layout_principal.addWidget(self.buscador_tabla)
+
         # Tabla de transacciones
         self.tabla = TablaTransacciones(self.eliminar_transaccion)
         layout_principal.addWidget(self.tabla)
+
+    def aplicar_filtro_fechas(self, inicio, fin):
+        self.filtro_inicio = inicio
+        self.filtro_fin = fin
+        self.actualizar_interfaz()
+
+    def aplicar_busqueda_tabla(self, texto, tipo, categoria):
+        self.filtro_texto = texto
+        self.filtro_tipo = tipo
+        self.filtro_categoria = categoria
+        self.actualizar_interfaz()
 
     def agregar_transaccion(self, transaccion):
         self.presupuesto.agregar_transaccion(transaccion)
@@ -71,11 +99,20 @@ class VentanaPrincipal(QMainWindow):
         self.actualizar_interfaz()
 
     def actualizar_interfaz(self):
-        # 1. Tabla de transacciones
-        self.tabla.poblar_tabla(self.presupuesto.transacciones)
+        # 0. Extraer transacciones con base en todos los filtros activos (fechas + buscador)
+        txs_filtradas = self.presupuesto.obtener_transacciones_filtradas(
+            self.filtro_inicio, 
+            self.filtro_fin,
+            self.filtro_texto,
+            self.filtro_tipo,
+            self.filtro_categoria
+        )
 
-        # 2. Métricas globales
-        balances = self.presupuesto.calcular_balance()
+        # 1. Tabla de transacciones (muestra únicamente lo que coincide con los filtros)
+        self.tabla.poblar_tabla(txs_filtradas)
+
+        # 2. Métricas globales calculadas con la data filtrada
+        balances = self.presupuesto.calcular_balance(txs_filtradas)
         self.tarjeta_ingresos.actualizar_valor(f"${balances['ingresos']:.2f}", "#36B37E")
         self.tarjeta_gastos.actualizar_valor(f"${balances['gastos']:.2f}", "#FF5630")
 
@@ -83,7 +120,7 @@ class VentanaPrincipal(QMainWindow):
         self.tarjeta_balance.actualizar_valor(f"${balances['balance']:.2f}", color_balance)
 
         # 3. Semáforo y barras de progreso por tope de categoría
-        estados = self.presupuesto.obtener_estado_topes()
+        estados = self.presupuesto.obtener_estado_topes(txs_filtradas)
         self.visualizador_metas.actualizar_panel(estados)
 
 def cargar_estilos(app, ruta_qcss="styles.qcss"):
